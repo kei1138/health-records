@@ -32,7 +32,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--lg);color:var(--dark
 .login-field input:focus{border-color:var(--teal);background:#fff;}
 .login-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#fff;border:none;border-radius:11px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px;box-shadow:0 4px 12px rgba(0,121,107,.3);}
 .login-btn:active{transform:scale(.98);}
-.login-err{font-size:12px;color:var(--red);text-align:center;margin-top:10px;min-height:18px;}
+.login-err{font-size:12px;text-align:center;margin-top:10px;min-height:18px;}
 
 /* ── APP ── */
 #app-screen{display:none;}
@@ -197,7 +197,6 @@ input[type=date]:focus{border-color:var(--teal);}
 .slbl{font-size:10px;font-weight:700;color:var(--gray);letter-spacing:1px;text-transform:uppercase;margin:12px 0 6px;}
 .empty{text-align:center;padding:32px 14px;color:var(--gray);font-size:12px;line-height:1.9;}
 .empty .em{font-size:36px;display:block;margin-bottom:8px;}
-.loading{text-align:center;padding:20px;color:var(--gray);font-size:12px;}
 
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--dark);color:#fff;padding:8px 18px;border-radius:30px;font-size:12px;font-weight:600;opacity:0;transition:.25s;z-index:999;white-space:nowrap;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -429,22 +428,23 @@ const DEFAULT_STEPS=[
 // ── AUTH MODE
 let authMode = 'login';
 function switchAuthTab(mode){
-  authMode = mode;
+  authMode=mode;
   const tl=document.getElementById('tab-login');
   const ts=document.getElementById('tab-signup');
   const btn=document.getElementById('auth-btn');
   if(mode==='login'){
-    tl.style.color='var(--teal-d)'; tl.style.borderBottomColor='var(--teal)';
-    ts.style.color='var(--gray)'; ts.style.borderBottomColor='transparent';
+    tl.style.color='var(--teal-d)';tl.style.borderBottomColor='var(--teal)';
+    ts.style.color='var(--gray)';ts.style.borderBottomColor='transparent';
     btn.textContent='ログイン';
   } else {
-    ts.style.color='var(--teal-d)'; ts.style.borderBottomColor='var(--teal)';
-    tl.style.color='var(--gray)'; tl.style.borderBottomColor='transparent';
+    ts.style.color='var(--teal-d)';ts.style.borderBottomColor='var(--teal)';
+    tl.style.color='var(--gray)';tl.style.borderBottomColor='transparent';
     btn.textContent='新規登録';
   }
   document.getElementById('login-err').textContent='';
 }
 
+// ── AUTH
 async function doAuth(){
   const email=document.getElementById('login-email').value.trim();
   const pass=document.getElementById('login-pass').value;
@@ -452,22 +452,21 @@ async function doAuth(){
   const btn=document.getElementById('auth-btn');
   err.textContent='';
   if(!email||!pass){err.textContent='メールとパスワードを入力してください';return;}
-  btn.textContent='処理中…'; btn.disabled=true;
+  btn.textContent='処理中…';btn.disabled=true;
   try{
-    let data, error;
+    let data,error;
     if(authMode==='login'){
       ({data,error}=await sb.auth.signInWithPassword({email,password:pass}));
       if(error) throw error;
-      startApp(data.user);
+      // onAuthStateChange が SIGNED_IN を検知して startApp を呼ぶ
     } else {
       ({data,error}=await sb.auth.signUp({email,password:pass}));
       if(error) throw error;
-      if(data.session){
-        startApp(data.user);
-      } else {
+      if(!data.session){
         err.style.color='var(--teal)';
         err.textContent='登録しました！ログインタブからログインしてください。';
       }
+      // セッションがあれば onAuthStateChange が startApp を呼ぶ
     }
   } catch(e){
     err.style.color='var(--red)';
@@ -481,17 +480,17 @@ async function doAuth(){
   btn.disabled=false;
 }
 
-  // ── AUTH STATE LISTENER & LOGOUT
-sb.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_IN' && session) {
+// ── AUTH STATE LISTENER & LOGOUT
+sb.auth.onAuthStateChange((event,session)=>{
+  if(event==='SIGNED_IN'&&session){
     startApp(session.user);
-  } else if (event === 'SIGNED_OUT') {
-    currentUser = null;
-    cache = {records:[], meals:[]};
-    document.getElementById('app-screen').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('login-email').value = '';
-    document.getElementById('login-pass').value = '';
+  } else if(event==='SIGNED_OUT'){
+    currentUser=null;
+    cache={records:[],meals:[]};
+    document.getElementById('app-screen').style.display='none';
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('login-email').value='';
+    document.getElementById('login-pass').value='';
   }
 });
 
@@ -501,18 +500,19 @@ async function doLogout(){
 
 // ── APP START
 async function startApp(user){
+  if(currentUser&&currentUser.id===user.id) return; // 二重起動防止
   currentUser=user;
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app-screen').style.display='block';
   const now=new Date(),p=n=>String(n).padStart(2,'0');
-  calYear=now.getFullYear(); calMonth=now.getMonth();
+  calYear=now.getFullYear();calMonth=now.getMonth();
   const ds=`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())}`;
   document.getElementById('rec-date').value=ds;
   document.getElementById('meal-date').value=ds;
   document.getElementById('today-badge').textContent=`${now.getFullYear()}年${p(now.getMonth()+1)}月${p(now.getDate())}日`;
   if(!localStorage.getItem('steps')) localStorage.setItem('steps',JSON.stringify(DEFAULT_STEPS));
   if(!localStorage.getItem('foodGood')) localStorage.setItem('foodGood',JSON.stringify(DEFAULT_GOOD));
-  if(!localStorage.getItem('foodBad'))  localStorage.setItem('foodBad', JSON.stringify(DEFAULT_BAD));
+  if(!localStorage.getItem('foodBad')) localStorage.setItem('foodBad',JSON.stringify(DEFAULT_BAD));
   await loadAllData();
   renderCalendar();
   renderSteps();
@@ -561,12 +561,11 @@ async function saveRecord(){
   const btn=document.getElementById('rec-save-btn');
   btn.disabled=true;btn.textContent='保存中…';
   const payload={
-    user_id:currentUser.id, date,
-    head:st.head??-1, shoulder:st.shoulder??-1, sleep:st.sleep??-1,
-    drug:st.drug, drug_name:document.getElementById('drug-name').value.trim(),
+    user_id:currentUser.id,date,
+    head:st.head??-1,shoulder:st.shoulder??-1,sleep:st.sleep??-1,
+    drug:st.drug,drug_name:document.getElementById('drug-name').value.trim(),
     memo:document.getElementById('rec-memo').value.trim()
   };
-  // upsert by date+user_id
   const existing=cache.records.find(r=>r.date===date);
   let error;
   if(existing){
@@ -577,7 +576,7 @@ async function saveRecord(){
   btn.disabled=false;btn.textContent='✅ 体調を保存';
   if(error){showToast('⚠️ 保存に失敗しました');return;}
   showToast('✅ 体調を保存しました！');
-  await loadAllData(); resetRecordForm(); renderCalendar();
+  await loadAllData();resetRecordForm();renderCalendar();
 }
 function resetRecordForm(){
   st={head:null,drug:null,shoulder:null,sleep:null};
@@ -643,9 +642,9 @@ async function saveMealRecord(){
   const goodEaten=Object.entries(mealSt.goodOn).filter(([,v])=>v).map(([k])=>k);
   const badEaten=Object.entries(mealSt.badOn).filter(([,v])=>v).map(([k])=>k);
   const payload={
-    user_id:currentUser.id, date,
-    good_eaten:goodEaten, bad_eaten:badEaten,
-    water:mealSt.water, score:goodEaten.length-badEaten.length,
+    user_id:currentUser.id,date,
+    good_eaten:goodEaten,bad_eaten:badEaten,
+    water:mealSt.water,score:goodEaten.length-badEaten.length,
     memo:document.getElementById('meal-memo').value.trim()
   };
   const existing=cache.meals.find(m=>m.date===date);
@@ -658,12 +657,12 @@ async function saveMealRecord(){
   btn.disabled=false;btn.textContent='✅ 食事を保存';
   if(error){showToast('⚠️ 保存に失敗しました');return;}
   showToast('✅ 食事を保存しました！');
-  await loadAllData(); resetMealForm(); renderCalendar();
+  await loadAllData();resetMealForm();renderCalendar();
 }
 function resetMealForm(){
   mealSt={water:0,goodOn:{},badOn:{}};
   document.getElementById('meal-memo').value='';
-  renderFoodChips(); setWater(0);
+  renderFoodChips();setWater(0);
   document.getElementById('meal-score-badge').innerHTML='';
 }
 
