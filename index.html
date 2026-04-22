@@ -213,15 +213,19 @@ input[type=date]:focus{border-color:var(--teal);}
       <h1>体調トラッカー</h1>
       <p>毎日1分。記録が改善への第一歩。</p>
     </div>
+    <div style="display:flex;margin-bottom:18px;border-bottom:2px solid #eee;">
+      <div id="tab-login" onclick="switchAuthTab('login')" style="flex:1;text-align:center;padding:8px;font-size:13px;font-weight:700;cursor:pointer;color:var(--teal-d);border-bottom:2px solid var(--teal);margin-bottom:-2px;">ログイン</div>
+      <div id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;text-align:center;padding:8px;font-size:13px;font-weight:700;cursor:pointer;color:var(--gray);border-bottom:2px solid transparent;margin-bottom:-2px;">新規登録</div>
+    </div>
     <div class="login-field">
       <label>メールアドレス</label>
       <input type="email" id="login-email" placeholder="example@gmail.com" autocomplete="email">
     </div>
     <div class="login-field">
       <label>パスワード</label>
-      <input type="password" id="login-pass" placeholder="パスワード" autocomplete="current-password">
+      <input type="password" id="login-pass" placeholder="6文字以上" autocomplete="current-password">
     </div>
-    <button class="login-btn" onclick="doLogin()">ログイン</button>
+    <button class="login-btn" id="auth-btn" onclick="doAuth()">ログイン</button>
     <div class="login-err" id="login-err"></div>
   </div>
 </div>
@@ -422,20 +426,63 @@ const DEFAULT_STEPS=[
   {id:'d4',title:'荷物と姿勢を見直す',desc:'リュックに変える・重いものを置いておくなど小さな工夫を。',color:'#6A1B9A',deadline:'',done:false,memo:'',star:1,builtin:true},
 ];
 
-// ── AUTH
-async function doLogin(){
+// ── AUTH MODE
+let authMode = 'login';
+function switchAuthTab(mode){
+  authMode = mode;
+  const tl=document.getElementById('tab-login');
+  const ts=document.getElementById('tab-signup');
+  const btn=document.getElementById('auth-btn');
+  if(mode==='login'){
+    tl.style.color='var(--teal-d)'; tl.style.borderBottomColor='var(--teal)';
+    ts.style.color='var(--gray)'; ts.style.borderBottomColor='transparent';
+    btn.textContent='ログイン';
+  } else {
+    ts.style.color='var(--teal-d)'; ts.style.borderBottomColor='var(--teal)';
+    tl.style.color='var(--gray)'; tl.style.borderBottomColor='transparent';
+    btn.textContent='新規登録';
+  }
+  document.getElementById('login-err').textContent='';
+}
+
+async function doAuth(){
   const email=document.getElementById('login-email').value.trim();
   const pass=document.getElementById('login-pass').value;
   const err=document.getElementById('login-err');
+  const btn=document.getElementById('auth-btn');
   err.textContent='';
   if(!email||!pass){err.textContent='メールとパスワードを入力してください';return;}
-  const btn=document.querySelector('.login-btn');
-  btn.textContent='ログイン中…';btn.disabled=true;
-  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
-  btn.textContent='ログイン';btn.disabled=false;
-  if(error){err.textContent='メールまたはパスワードが違います';return;}
-  startApp(data.user);
+  btn.textContent='処理中…'; btn.disabled=true;
+  try{
+    let data, error;
+    if(authMode==='login'){
+      ({data,error}=await sb.auth.signInWithPassword({email,password:pass}));
+      if(error) throw error;
+      startApp(data.user);
+    } else {
+      ({data,error}=await sb.auth.signUp({email,password:pass}));
+      if(error) throw error;
+      if(data.session){
+        startApp(data.user);
+      } else {
+        err.style.color='var(--teal)';
+        err.textContent='登録しました！ログインタブからログインしてください。';
+      }
+    }
+  } catch(e){
+    err.style.color='var(--red)';
+    let msg=e.message||'エラーが発生しました';
+    if(msg.includes('Invalid login')||msg.includes('invalid_credentials')) msg='メールまたはパスワードが違います';
+    if(msg.includes('User already registered')) msg='このメールはすでに登録済みです';
+    if(msg.includes('Email not confirmed')) msg='メール認証が完了していません';
+    err.textContent=msg;
+  }
+  btn.textContent=authMode==='login'?'ログイン':'新規登録';
+  btn.disabled=false;
 }
+
+// 旧doLogin関数を残す（後方互換）
+async function doLogin(){ doAuth(); }
 
 async function doLogout(){
   await sb.auth.signOut();
@@ -789,7 +836,7 @@ function showToast(msg){
 }
 
 // Enter key on login
-document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();});
 </script>
 </body>
 </html>
