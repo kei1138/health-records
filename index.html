@@ -482,7 +482,7 @@ async function doAuth(){
 
 // ── AUTH STATE LISTENER & LOGOUT
 sb.auth.onAuthStateChange((event,session)=>{
-  if(event==='SIGNED_IN'&&session){
+  if(event==='SIGNED_IN'&&session&&!currentUser){
     startApp(session.user);
   } else if(event==='SIGNED_OUT'){
     currentUser=null;
@@ -495,7 +495,13 @@ sb.auth.onAuthStateChange((event,session)=>{
 });
 
 async function doLogout(){
-  await sb.auth.signOut();
+  await sb.auth.signOut({ scope: 'local' });
+  currentUser = null;
+  cache = {records:[], meals:[]};
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
 }
 
 // ── APP START
