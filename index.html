@@ -37,13 +37,13 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--lg);color:var(--dark
 /* ── APP ── */
 #app-screen{display:none;}
 .hdr{background:linear-gradient(135deg,var(--teal-d),var(--teal-m));color:#fff;padding:18px 16px 34px;position:relative;overflow:hidden;}
-.hdr::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.07);}
+.hdr::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.07);pointer-events:none;}
 .hdr::after{content:'';position:absolute;bottom:-20px;left:0;right:0;height:42px;background:var(--lg);border-radius:55% 55% 0 0/100% 100% 0 0;}
 .hdr-row{display:flex;align-items:flex-start;justify-content:space-between;}
 .hdr h1{font-size:18px;font-weight:900;}
 .hdr small{font-size:11px;opacity:.75;display:block;margin-top:3px;}
 .badge{display:inline-block;background:rgba(255,255,255,0.18);border-radius:20px;padding:3px 10px;font-size:11px;margin-top:7px;}
-.logout-btn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;margin-top:2px;}
+.logout-btn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;margin-top:2px;position:relative;z-index:10;pointer-events:auto;}
 
 /* TABS */
 .tabs{display:flex;background:#fff;margin:0 10px;border-radius:12px;padding:3px;box-shadow:var(--shadow);position:sticky;top:7px;z-index:100;gap:2px;}
